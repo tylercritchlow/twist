@@ -38,7 +38,7 @@
 
 ## Installation
 
-All binaries or installers can be found in the [releases](gitea.com/tylercritchlow/twist/releases) section.
+All binaries or installers can be found in the [releases](https://gitea.com/tylercritchlow/Twist/releases) section.
 
 ## Development
 
