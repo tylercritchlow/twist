@@ -1,4 +1,4 @@
-use bevy::{ecs::query, prelude::*, ui::update};
+use bevy::prelude::*;
 mod scramblegeneration;
 
 fn main() {
@@ -36,7 +36,7 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         .with_text_justify(JustifyText::Center)
         .with_style(Style {
             top: Val::Vh(2.0),
-            left: Val::Vw(46.0), // THIS sucks, but I don't know how to center it
+            left: Val::Vw(30.0), // THIS sucks, but I don't know how to center it
             ..default()
         }),
         ScrambleText,
