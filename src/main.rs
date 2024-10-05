@@ -35,8 +35,8 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         )
         .with_text_justify(JustifyText::Center)
         .with_style(Style {
-            top: Val::Vh(2.0),
-            left: Val::Vw(30.0), // THIS sucks, but I don't know how to center it
+            margin: UiRect::horizontal(Val::Auto),
+            top: Val::Px(20.0),
             ..default()
         }),
         ScrambleText,
@@ -53,10 +53,11 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         )
         .with_text_justify(JustifyText::Center)
         .with_style(Style {
-            top: Val::Vh(46.0),  // THIS sucks, but I don't know how to center it
-            left: Val::Vw(46.0), // THIS sucks, but I don't know how to center it
+            margin: UiRect::all(Val::Auto),
+        
             ..default()
         }),
+        
         TimerText,
     ));
 
