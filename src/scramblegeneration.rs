@@ -109,3 +109,15 @@ pub fn generate_scramble(length: usize) -> Vec<ScrambleMove> {
 
     scramble
 }
+
+pub fn generate_scramble_string(length: usize) -> String {
+    let scramble = generate_scramble(length);
+    let mut scramble_str = String::new();
+
+    for mv in scramble {
+        scramble_str.push_str(&mv.to_string());
+        scramble_str.push(' ');
+    }
+
+    scramble_str
+}
