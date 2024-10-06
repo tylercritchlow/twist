@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_persistent::prelude::*;
 use serde::{Deserialize, Serialize};
 
-mod scramblegeneration;
+pub(crate) mod scramblegeneration;
 
 #[derive(Serialize, Deserialize)]
 struct Session {
@@ -179,4 +179,129 @@ fn update_session_data(mut session_data: ResMut<Persistent<SessionData>>, time: 
     session_data.update(|session_data| {
         session_data.scrambles.push(scramble.clone());
     }).expect("failed to update session data");
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use crate::scramblegeneration::*;
+    
+    #[test]
+    fn test_scramble_move_to_string() {
+        assert_eq!(
+            ScrambleMove {
+                mv: Move::U,
+                variation: MoveVariation::Normal
+            }
+            .to_string(),
+            "U"
+        );
+        assert_eq!(
+            ScrambleMove {
+                mv: Move::R,
+                variation: MoveVariation::Prime
+            }
+            .to_string(),
+            "R'"
+        );
+        assert_eq!(
+            ScrambleMove {
+                mv: Move::F,
+                variation: MoveVariation::Double
+            }
+            .to_string(),
+            "F2"
+        );
+    }
+
+    #[test]
+    fn test_moves_cancel() {
+        assert!(moves_cancel(
+            &ScrambleMove {
+                mv: Move::U,
+                variation: MoveVariation::Normal
+            },
+            &ScrambleMove {
+                mv: Move::U,
+                variation: MoveVariation::Prime
+            }
+        ));
+        assert!(moves_cancel(
+            &ScrambleMove {
+                mv: Move::R,
+                variation: MoveVariation::Double
+            },
+            &ScrambleMove {
+                mv: Move::R,
+                variation: MoveVariation::Double
+            }
+        ));
+        assert!(!moves_cancel(
+            &ScrambleMove {
+                mv: Move::L,
+                variation: MoveVariation::Normal
+            },
+            &ScrambleMove {
+                mv: Move::L,
+                variation: MoveVariation::Double
+            }
+        ));
+    }
+
+    #[test]
+    fn test_moves_repeat() {
+        assert!(moves_repeat(
+            &ScrambleMove {
+                mv: Move::U,
+                variation: MoveVariation::Normal
+            },
+            &ScrambleMove {
+                mv: Move::U,
+                variation: MoveVariation::Prime
+            }
+        ));
+        assert!(!moves_repeat(
+            &ScrambleMove {
+                mv: Move::L,
+                variation: MoveVariation::Normal
+            },
+            &ScrambleMove {
+                mv: Move::R,
+                variation: MoveVariation::Normal
+            }
+        ));
+    }
+
+    #[test]
+    fn test_are_opposite_faces() {
+        assert!(are_opposite_faces(&Move::U, &Move::D));
+        assert!(are_opposite_faces(&Move::L, &Move::R));
+        assert!(are_opposite_faces(&Move::F, &Move::B));
+        assert!(!are_opposite_faces(&Move::U, &Move::L));
+        assert!(!are_opposite_faces(&Move::F, &Move::R));
+    }
+
+    #[test]
+    fn test_generate_scramble() {
+        let scramble = generate_scramble(20);
+        assert_eq!(scramble.len(), 20);
+
+        for i in 1..scramble.len() {
+            assert!(!moves_repeat(&scramble[i - 1], &scramble[i]));
+            assert!(!moves_cancel(&scramble[i - 1], &scramble[i]));
+
+            if i > 1 {
+                assert!(!are_opposite_faces(&scramble[i - 2].mv, &scramble[i].mv)
+                    || !are_opposite_faces(&scramble[i - 1].mv, &scramble[i].mv));
+            }
+        }
+    }
+
+    #[test]
+    fn test_generate_scramble_string() {
+        let scramble_str = generate_scramble_string(20);
+        let moves: Vec<&str> = scramble_str.trim().split_whitespace().collect();
+        assert_eq!(moves.len(), 20);
+    }
 }

@@ -3,12 +3,12 @@ use rand::thread_rng;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Move {
-    U,  // Up
-    D,  // Down
-    L,  // Left
-    R,  // Right
-    F,  // Front
-    B,  // Back
+    U, // Up
+    D, // Down
+    L, // Left
+    R, // Right
+    F, // Front
+    B, // Back
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -34,7 +34,7 @@ impl ScrambleMove {
             Move::F => "F",
             Move::B => "B",
         };
-        
+
         let variation_str = match self.variation {
             MoveVariation::Normal => "",
             MoveVariation::Prime => "'",
@@ -46,20 +46,20 @@ impl ScrambleMove {
 }
 
 // Function to check if two moves cancel each other
-fn moves_cancel(m1: &ScrambleMove, m2: &ScrambleMove) -> bool {
-    m1.mv == m2.mv &&
-    ((m1.variation == MoveVariation::Normal && m2.variation == MoveVariation::Prime) ||
-     (m1.variation == MoveVariation::Prime && m2.variation == MoveVariation::Normal) ||
-     (m1.variation == MoveVariation::Double && m2.variation == MoveVariation::Double))
+pub(crate) fn moves_cancel(m1: &ScrambleMove, m2: &ScrambleMove) -> bool {
+    m1.mv == m2.mv
+        && ((m1.variation == MoveVariation::Normal && m2.variation == MoveVariation::Prime)
+            || (m1.variation == MoveVariation::Prime && m2.variation == MoveVariation::Normal)
+            || (m1.variation == MoveVariation::Double && m2.variation == MoveVariation::Double))
 }
 
 // Function to check if two moves are the same (even with different variations)
-fn moves_repeat(m1: &ScrambleMove, m2: &ScrambleMove) -> bool {
+pub(crate) fn moves_repeat(m1: &ScrambleMove, m2: &ScrambleMove) -> bool {
     m1.mv == m2.mv
 }
 
 // Function to check if two moves affect opposite faces (like U and D, or L and R)
-fn are_opposite_faces(m1: &Move, m2: &Move) -> bool {
+pub(crate) fn are_opposite_faces(m1: &Move, m2: &Move) -> bool {
     match (m1, m2) {
         (Move::U, Move::D) | (Move::D, Move::U) => true,
         (Move::L, Move::R) | (Move::R, Move::L) => true,
@@ -95,8 +95,9 @@ pub fn generate_scramble(length: usize) -> Vec<ScrambleMove> {
                 // Check for a pattern like U D U or D U D' for opposite faces
                 if scramble.len() > 1 {
                     let second_last_move = scramble[scramble.len() - 2];
-                    if are_opposite_faces(&second_last_move.mv, &new_move.mv) &&
-                        are_opposite_faces(&last_move.mv, &new_move.mv) {
+                    if are_opposite_faces(&second_last_move.mv, &new_move.mv)
+                        && are_opposite_faces(&last_move.mv, &new_move.mv)
+                    {
                         continue;
                     }
                 }
