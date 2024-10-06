@@ -19,8 +19,17 @@ fn main() {
     println!("{}", dirs::config_dir().unwrap().join("twist").display());
 
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_systems(Startup, setup)
+        .add_plugins(DefaultPlugins.set(WindowPlugin { primary_window: Some(Window {
+
+        
+            title: "twist".into(),
+            name: Some("twist.app".into()),
+            resolution: (1920., 1080.).into(),
+            ..Default::default()
+        } ),
+        ..Default::default()
+        }))
+        .add_systems(Startup, (setup, maximize_window))
         .add_systems(Update, (spacebar_timer_system, update_timer_text, update_average_of_five_text))
         .run();
 }
@@ -49,7 +58,7 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         TextBundle::from_section(
             scramblegeneration::generate_scramble_string(20),
             TextStyle {
-                font_size: 20.0,
+                font_size: 40.0,
                 color: Color::WHITE,
                 ..default()
             },
@@ -67,7 +76,7 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         TextBundle::from_section(
             "Average of 5: 0.00",
             TextStyle {
-                font_size: 20.0,
+                font_size: 30.0,
                 color: Color::WHITE,
                 ..default()
             },
@@ -85,7 +94,7 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         TextBundle::from_section(
             "0.00",
             TextStyle {
-                font_size: 60.0,
+                font_size: 120.0,
                 color: Color::WHITE,
                 ..default()
             },
@@ -119,7 +128,8 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
             })
             .build()
             .expect("failed to initialize session data"),
-    )
+    );
+    commands.insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.3)));
 }
 
 fn spacebar_timer_system(
@@ -221,7 +231,8 @@ fn update_average_of_five_text(
     session_data: Res<Persistent<SessionData>>,
 ) {
     if session_data.times.len() > 5 {
-        let mut last_five_times: Vec<f32> = session_data.times.iter().rev().take(5).cloned().collect();
+        let mut last_five_times: Vec<f32> =
+            session_data.times.iter().rev().take(5).cloned().collect();
         last_five_times.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let average_of_5 = last_five_times[1..4].iter().sum::<f32>() / 3.0;
@@ -230,7 +241,11 @@ fn update_average_of_five_text(
             text.sections[0].value = format!("Average of 5: {:.2}", average_of_5);
         }
     }
+}
 
+fn maximize_window(mut windows: Query<&mut Window>) {
+    let mut window = windows.single_mut();
+    window.set_maximized(true);
 }
 
 #[cfg(test)]
