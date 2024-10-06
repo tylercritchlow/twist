@@ -1,7 +1,23 @@
 use bevy::prelude::*;
+use bevy_persistent::prelude::*;
+use serde::{Deserialize, Serialize};
+
 mod scramblegeneration;
 
+#[derive(Serialize, Deserialize)]
+struct Session {
+    id: u32,
+}
+
+#[derive(Resource, Serialize, Deserialize)]
+struct SessionData {
+    session: Session,
+    scrambles: Vec<String>,
+    times: Vec<f32>,
+}
 fn main() {
+    println!("{}", dirs::config_dir().unwrap().join("twist").display());
+
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
@@ -68,12 +84,23 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
         held: false,
         held_time: 0.0,
     });
-}
+
+    let config_dir = dirs::config_dir().unwrap().join("twist");
+    commands.insert_resource(
+        Persistent::<SessionData>::builder()
+            .name("session data")
+            .format(StorageFormat::Toml)
+            .path(config_dir.join("sessiondata.toml"))
+            .default(SessionData { session: Session { id: 0 }, scrambles: Vec::new(), times: Vec::new() })
+            .build()
+            .expect("failed to initialize session data")
+    )}
 
 fn spacebar_timer_system(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut timer_state: ResMut<TimerState>,
+    session_data: ResMut<Persistent<SessionData>>,
     query: Query<&mut Text, With<ScrambleText>>,
 ) {
     let spacebar_pressed = keyboard_input.pressed(KeyCode::Space);
@@ -108,6 +135,7 @@ fn spacebar_timer_system(
         timer_state.just_stopped = true;
         timer_state.held_time = 0.0;
 
+        update_session_data(session_data, timer_state.time_elapsed, query.iter().next().unwrap().sections[0].value.clone());
         update_scramble_text(query);
     }
 
@@ -124,9 +152,9 @@ fn update_timer_text(
         text.sections[0].value = format!("{:.2}", timer_state.time_elapsed);
 
         if timer_state.held_time >= 0.5 {
-            text.sections[0].style.color = Color::srgb(0.0, 1.0, 0.0); // Green
+            text.sections[0].style.color = Color::srgb(0.0, 1.0, 0.0);
         } else {
-            text.sections[0].style.color = Color::srgb(1.0, 0.0, 0.0); // Red
+            text.sections[0].style.color = Color::srgb(1.0, 0.0, 0.0);
         }
 
         if timer_state.counting || !timer_state.held {
@@ -139,4 +167,16 @@ fn update_scramble_text(mut query: Query<&mut Text, With<ScrambleText>>) {
     for mut text in &mut query {
         text.sections[0].value = scramblegeneration::generate_scramble_string(20);
     }
+}
+
+fn update_session_data(mut session_data: ResMut<Persistent<SessionData>>, time: f32, scramble: String) {
+    session_data.update(|session_data| {
+        session_data.times.push(time);
+    }).expect("failed to update session data");
+
+    println!("{:?}", session_data.times);
+
+    session_data.update(|session_data| {
+        session_data.scrambles.push(scramble.clone());
+    }).expect("failed to update session data");
 }
