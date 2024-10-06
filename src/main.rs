@@ -21,7 +21,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(Update, (spacebar_timer_system, update_timer_text))
+        .add_systems(Update, (spacebar_timer_system, update_timer_text, update_average_of_five_text))
         .run();
 }
 
@@ -30,6 +30,9 @@ struct TimerText;
 
 #[derive(Component)]
 struct ScrambleText;
+
+#[derive(Component)]
+struct AverageOfFiveText;
 
 #[derive(Resource)]
 struct TimerState {
@@ -58,6 +61,24 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
             ..default()
         }),
         ScrambleText,
+    ));
+
+    commands.spawn((
+        TextBundle::from_section(
+            "Average of 5: 0.00",
+            TextStyle {
+                font_size: 20.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_text_justify(JustifyText::Center)
+        .with_style(Style {
+            margin: UiRect::horizontal(Val::Auto),
+            top: Val::Px(150.0),
+            ..default()
+        }),
+        AverageOfFiveText,
     ));
 
     commands.spawn((
@@ -91,10 +112,15 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
             .name("session data")
             .format(StorageFormat::Toml)
             .path(config_dir.join("sessiondata.toml"))
-            .default(SessionData { session: Session { id: 0 }, scrambles: Vec::new(), times: Vec::new() })
+            .default(SessionData {
+                session: Session { id: 0 },
+                scrambles: Vec::new(),
+                times: Vec::new(),
+            })
             .build()
-            .expect("failed to initialize session data")
-    )}
+            .expect("failed to initialize session data"),
+    )
+}
 
 fn spacebar_timer_system(
     time: Res<Time>,
@@ -126,7 +152,7 @@ fn spacebar_timer_system(
 
     if spacebar_pressed && !timer_state.counting {
         timer_state.held_time += time.delta_seconds();
-    }else {
+    } else {
         timer_state.held_time = 0.0;
     }
 
@@ -135,7 +161,11 @@ fn spacebar_timer_system(
         timer_state.just_stopped = true;
         timer_state.held_time = 0.0;
 
-        update_session_data(session_data, timer_state.time_elapsed, query.iter().next().unwrap().sections[0].value.clone());
+        update_session_data(
+            session_data,
+            timer_state.time_elapsed,
+            query.iter().next().unwrap().sections[0].value.clone(),
+        );
         update_scramble_text(query);
     }
 
@@ -144,10 +174,7 @@ fn spacebar_timer_system(
     }
 }
 
-fn update_timer_text(
-    mut query: Query<&mut Text, With<TimerText>>,
-    timer_state: Res<TimerState>,
-) {
+fn update_timer_text(mut query: Query<&mut Text, With<TimerText>>, timer_state: Res<TimerState>) {
     for mut text in &mut query {
         text.sections[0].value = format!("{:.2}", timer_state.time_elapsed);
 
@@ -169,24 +196,51 @@ fn update_scramble_text(mut query: Query<&mut Text, With<ScrambleText>>) {
     }
 }
 
-fn update_session_data(mut session_data: ResMut<Persistent<SessionData>>, time: f32, scramble: String) {
-    session_data.update(|session_data| {
-        session_data.times.push(time);
-    }).expect("failed to update session data");
+fn update_session_data(
+    mut session_data: ResMut<Persistent<SessionData>>,
+    time: f32,
+    scramble: String,
+) {
+    session_data
+        .update(|session_data| {
+            session_data.times.push(time);
+        })
+        .expect("failed to update session data");
 
     println!("{:?}", session_data.times);
 
-    session_data.update(|session_data| {
-        session_data.scrambles.push(scramble.clone());
-    }).expect("failed to update session data");
+    session_data
+        .update(|session_data| {
+            session_data.scrambles.push(scramble.clone());
+        })
+        .expect("failed to update session data");
 }
 
+fn update_average_of_five_text(
+    mut query: Query<&mut Text, With<AverageOfFiveText>>,
+    session_data: Res<Persistent<SessionData>>,
+) {
+    if session_data.times.len() > 5 {
+        let average_of_5 = session_data
+            .times
+            .iter()
+            .rev()
+            .take(5)
+            .fold(0.0, |acc, &time| acc + time)
+            / 5.0;
+
+        for mut text in &mut query {
+            text.sections[0].value = format!("Average of 5: {:.2}", average_of_5);
+        }
+    }
+
+}
 
 #[cfg(test)]
 mod tests {
 
     use crate::scramblegeneration::*;
-    
+
     #[test]
     fn test_scramble_move_to_string() {
         assert_eq!(
@@ -292,8 +346,10 @@ mod tests {
             assert!(!moves_cancel(&scramble[i - 1], &scramble[i]));
 
             if i > 1 {
-                assert!(!are_opposite_faces(&scramble[i - 2].mv, &scramble[i].mv)
-                    || !are_opposite_faces(&scramble[i - 1].mv, &scramble[i].mv));
+                assert!(
+                    !are_opposite_faces(&scramble[i - 2].mv, &scramble[i].mv)
+                        || !are_opposite_faces(&scramble[i - 1].mv, &scramble[i].mv)
+                );
             }
         }
     }
