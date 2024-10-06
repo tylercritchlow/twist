@@ -221,13 +221,10 @@ fn update_average_of_five_text(
     session_data: Res<Persistent<SessionData>>,
 ) {
     if session_data.times.len() > 5 {
-        let average_of_5 = session_data
-            .times
-            .iter()
-            .rev()
-            .take(5)
-            .fold(0.0, |acc, &time| acc + time)
-            / 5.0;
+        let mut last_five_times: Vec<f32> = session_data.times.iter().rev().take(5).cloned().collect();
+        last_five_times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        let average_of_5 = last_five_times[1..4].iter().sum::<f32>() / 3.0;
 
         for mut text in &mut query {
             text.sections[0].value = format!("Average of 5: {:.2}", average_of_5);
