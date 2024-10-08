@@ -119,8 +119,8 @@ fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
     commands.insert_resource(
         Persistent::<SessionData>::builder()
             .name("session data")
-            .format(StorageFormat::Toml)
-            .path(config_dir.join("sessiondata.toml"))
+            .format(StorageFormat::Bincode)
+            .path(config_dir.join("sessiondata"))
             .default(SessionData {
                 session: Session { id: 0 },
                 scrambles: Vec::new(),
