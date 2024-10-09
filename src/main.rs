@@ -230,7 +230,7 @@ fn update_average_of_five_text(
     mut query: Query<&mut Text, With<AverageOfFiveText>>,
     session_data: Res<Persistent<SessionData>>,
 ) {
-    if session_data.times.len() > 5 {
+    if session_data.times.len() >= 5 {
         let mut last_five_times: Vec<f32> =
             session_data.times.iter().rev().take(5).cloned().collect();
         last_five_times.sort_by(|a, b| a.partial_cmp(b).unwrap());
