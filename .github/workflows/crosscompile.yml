@@ -1,0 +1,108 @@
+name: Rust Cross-Platform Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [x86_64, arm64]
+        exclude:
+          - os: windows-latest
+            arch: arm64 # Windows arm64 is excluded
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Caching the Cargo dependencies to speed up the builds
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/index
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ matrix.arch }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-${{ matrix.arch }}-
+
+      # Install necessary dependencies for Linux
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            sudo apt-get install gcc-aarch64-linux-gnu
+          fi
+
+      # Install cross-compilation dependencies for macOS
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            rustup target add aarch64-apple-darwin
+          fi
+
+      # Set up the Rust toolchain
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.arch_target }}
+          components: rustfmt
+
+      # Build the Rust project for the target architecture
+      - name: Build with Cargo
+        run: |
+          rustup target add ${{ matrix.arch_target }}
+          cargo build --release --target ${{ matrix.arch_target }}
+
+      # Run tests on the build
+      - name: Run tests with Cargo
+        run: cargo test --target ${{ matrix.arch_target }}
+
+      # Upload the release binary as an artifact
+      - name: Upload compiled binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-${{ matrix.arch }}-binary
+          path: target/${{ matrix.arch_target }}/release/
+
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: '-C target-cpu=native'
+
+# Define the architecture targets
+env:
+  matrix.arch_target:
+    x86_64: |
+      ubuntu-latest: x86_64-unknown-linux-gnu
+      windows-latest: x86_64-pc-windows-msvc
+      macos-latest: x86_64-apple-darwin
+    arm64: |
+      ubuntu-latest: aarch64-unknown-linux-gnu
+      macos-latest: aarch64-apple-darwin
