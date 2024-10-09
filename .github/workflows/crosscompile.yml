@@ -16,9 +16,26 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         arch: [x86_64, arm64]
+        # Define specific architecture targets based on OS and arch
+        arch_target:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            arch: x86_64
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            arch: arm64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
         exclude:
           - os: windows-latest
-            arch: arm64 # Windows arm64 is excluded
+            arch: arm64  # Exclude Windows arm64, as you requested
 
     steps:
       - name: Checkout code
@@ -72,37 +89,26 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.arch_target }}
+          target: ${{ matrix.arch_target.target }}
           components: rustfmt
 
       # Build the Rust project for the target architecture
       - name: Build with Cargo
         run: |
-          rustup target add ${{ matrix.arch_target }}
-          cargo build --release --target ${{ matrix.arch_target }}
+          rustup target add ${{ matrix.arch_target.target }}
+          cargo build --release --target ${{ matrix.arch_target.target }}
 
       # Run tests on the build
       - name: Run tests with Cargo
-        run: cargo test --target ${{ matrix.arch_target }}
+        run: cargo test --target ${{ matrix.arch_target.target }}
 
       # Upload the release binary as an artifact
       - name: Upload compiled binaries
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-binary
-          path: target/${{ matrix.arch_target }}/release/
+          path: target/${{ matrix.arch_target.target }}/release/
 
     env:
       CARGO_INCREMENTAL: 0
       RUSTFLAGS: '-C target-cpu=native'
-
-# Define the architecture targets
-env:
-  matrix.arch_target:
-    x86_64: |
-      ubuntu-latest: x86_64-unknown-linux-gnu
-      windows-latest: x86_64-pc-windows-msvc
-      macos-latest: x86_64-apple-darwin
-    arm64: |
-      ubuntu-latest: aarch64-unknown-linux-gnu
-      macos-latest: aarch64-apple-darwin
