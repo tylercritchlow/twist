@@ -3,9 +3,16 @@ name = "twist"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+[dev-dependencies]
 rand = "0.8.5"
 bevy = { version = "0.14.2", features = ["dynamic_linking"] }
+bevy-persistent = { version = "0.6.0", features = ["all"] }
+serde = "1.0.210"
+dirs = "5.0.1"
+
+[dependencies]
+rand = "0.8.5"
+bevy = "0.14.2"
 bevy-persistent = { version = "0.6.0", features = ["all"] }
 serde = "1.0.210"
 dirs = "5.0.1"
